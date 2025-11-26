@@ -106,12 +106,15 @@ The algorithm supports four different prioritization strategies:
 ### Backend Architecture
 - **Django REST Framework**: Chosen for rapid API development and built-in serialization
 - **Modular scoring system**: Separate `TaskScorer` class allows easy strategy switching
-- **Stateless design**: No database persistence required for core functionality
+- **Real-time algorithm**: Task suggestions use dynamic scoring, not static data
+- **In-memory storage**: Tasks analyzed via `/analyze/` are stored for personalized suggestions
 - **Comprehensive validation**: Input validation at multiple levels
 
 ### Frontend Architecture
 - **Vanilla JavaScript**: No framework dependencies for simplicity
 - **Class-based organization**: Clean separation of concerns
+- **Dual input methods**: Manual form for simple tasks, bulk JSON for complex scenarios
+- **Visual priority indicators**: Color-coded results (Red: High ≥0.7, Orange: Medium 0.5-0.69, Green: Low <0.5)
 - **Responsive design**: Works on desktop and mobile devices
 - **Progressive enhancement**: Graceful error handling and loading states
 
@@ -121,14 +124,29 @@ The algorithm supports four different prioritization strategies:
 - **Dependency awareness**: Considers task interdependencies in scoring
 - **Time-sensitive**: Accounts for current date in urgency calculations
 
+## Features
+
+### Core Functionality
+- **Multi-factor Priority Scoring**: Considers urgency, importance, effort, and dependencies
+- **4 Sorting Strategies**: Smart Balance, Fastest Wins, High Impact, Deadline Driven
+- **Real-time Suggestions**: Dynamic task recommendations based on current analysis
+- **Dependency Management**: Handles task interdependencies with circular dependency detection
+- **Visual Priority Coding**: Color-coded results for quick task identification
+
+### Input Methods
+- **Manual Form**: Simple task entry with title, due date, hours, and importance
+- **Bulk JSON**: Advanced input supporting dependencies and multiple tasks
+- **Task Storage**: Analyzed tasks are stored for personalized suggestions
+
 ## Time Breakdown
 
 - **Algorithm Design & Implementation**: 45 minutes
 - **Backend Development (Django/API)**: 60 minutes
 - **Frontend Development**: 75 minutes
+- **Real Algorithm Implementation**: 30 minutes
 - **Testing & Validation**: 30 minutes
 - **Documentation & Polish**: 30 minutes
-- **Total**: ~4 hours
+- **Total**: ~4.5 hours
 
 ## API Endpoints
 
@@ -169,7 +187,37 @@ Analyzes and sorts a list of tasks by priority score.
 ```
 
 ### GET /api/tasks/suggest/
-Returns the top 3 recommended tasks with explanations.
+Returns the top 3 recommended tasks with explanations using real-time priority scoring.
+
+**Response:**
+```json
+{
+  "suggested_tasks": [
+    {
+      "title": "Fix critical login bug",
+      "due_date": "2025-01-15",
+      "estimated_hours": 2,
+      "importance": 9,
+      "dependencies": [],
+      "priority_score": 0.83,
+      "explanation": "High importance • Quick completion"
+    }
+  ]
+}
+```
+
+### POST /api/tasks/add/
+Adds a single task to the suggestion pool for personalized recommendations.
+
+**Request Body:**
+```json
+{
+  "title": "New urgent task",
+  "due_date": "2025-01-10",
+  "estimated_hours": 1,
+  "importance": 10
+}
+```
 
 ## Future Improvements
 
