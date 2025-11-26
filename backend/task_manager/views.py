@@ -2,18 +2,23 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from .scoring import TaskScorer
-from .serializers import TaskAnalysisSerializer, TaskWithScoreSerializer
+from .serializers import TaskAnalysisSerializer, TaskWithScoreSerializer, TaskSerializer
 
 
 @api_view(['POST'])
 def analyze_tasks(request):
     """Analyze and sort tasks by priority score"""
+    global SUGGESTION_TASKS
+    
     serializer = TaskAnalysisSerializer(data=request.data)
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     tasks = serializer.validated_data['tasks']
     strategy = serializer.validated_data.get('strategy', 'smart_balance')
+    
+    # Store tasks for suggestions (in-memory)
+    SUGGESTION_TASKS = tasks.copy()
     
     scorer = TaskScorer(strategy)
     
@@ -49,42 +54,107 @@ def analyze_tasks(request):
     return Response({'tasks': scored_tasks})
 
 
+# In-memory task storage for suggestions
+SUGGESTION_TASKS = []
+
 @api_view(['GET'])
 def suggest_tasks(request):
-    """Get top 3 task suggestions with explanations"""
-    # For demo purposes, return sample suggestions
-    # In a real app, this would analyze user's actual tasks
-    sample_tasks = [
-        {
-            'title': 'Fix critical login bug',
-            'due_date': '2025-01-15',
-            'estimated_hours': 2,
-            'importance': 9,
-            'dependencies': [],
-            'priority_score': 0.85,
-            'explanation': 'High importance task with moderate urgency - critical for user experience'
-        },
-        {
-            'title': 'Update documentation',
-            'due_date': '2025-01-20',
-            'estimated_hours': 1,
-            'importance': 6,
-            'dependencies': [],
-            'priority_score': 0.72,
-            'explanation': 'Quick win task that can be completed efficiently'
-        },
-        {
-            'title': 'Implement new feature',
-            'due_date': '2025-01-25',
-            'estimated_hours': 8,
-            'importance': 8,
-            'dependencies': [],
-            'priority_score': 0.68,
-            'explanation': 'Important feature but requires significant time investment'
-        }
-    ]
+    """Get top 3 task suggestions with explanations using real algorithm"""
+    global SUGGESTION_TASKS
     
-    return Response({'suggested_tasks': sample_tasks[:3]})
+    # If no tasks stored, return default suggestions
+    if not SUGGESTION_TASKS:
+        default_tasks = [
+            {
+                'title': 'Fix critical login bug',
+                'due_date': '2025-01-15',
+                'estimated_hours': 2,
+                'importance': 9,
+                'dependencies': []
+            },
+            {
+                'title': 'Update documentation', 
+                'due_date': '2025-01-20',
+                'estimated_hours': 1,
+                'importance': 6,
+                'dependencies': []
+            },
+            {
+                'title': 'Implement new feature',
+                'due_date': '2025-01-25', 
+                'estimated_hours': 8,
+                'importance': 8,
+                'dependencies': []
+            },
+            {
+                'title': 'Code review',
+                'due_date': '2025-01-12',
+                'estimated_hours': 3,
+                'importance': 7,
+                'dependencies': []
+            },
+            {
+                'title': 'Deploy to staging',
+                'due_date': '2025-01-18',
+                'estimated_hours': 2,
+                'importance': 8,
+                'dependencies': []
+            }
+        ]
+        SUGGESTION_TASKS = default_tasks
+    
+    # Apply real scoring algorithm
+    scorer = TaskScorer('smart_balance')
+    scored_tasks = []
+    
+    for task in SUGGESTION_TASKS:
+        try:
+            score = scorer.calculate_priority_score(task)
+            explanation = _generate_explanation(task, score, 'smart_balance')
+            
+            scored_task = {
+                **task,
+                'priority_score': round(score, 3),
+                'explanation': explanation
+            }
+            scored_tasks.append(scored_task)
+        except Exception:
+            continue
+    
+    # Sort by priority score and return top 3
+    scored_tasks.sort(key=lambda x: x['priority_score'], reverse=True)
+    
+    return Response({'suggested_tasks': scored_tasks[:3]})
+
+
+@api_view(['POST'])
+def add_task_to_suggestions(request):
+    """Add a single task to the suggestion pool"""
+    global SUGGESTION_TASKS
+    
+    # Validate task data
+    required_fields = ['title', 'due_date', 'estimated_hours', 'importance']
+    task_data = request.data
+    
+    for field in required_fields:
+        if field not in task_data:
+            return Response(
+                {'error': f'Missing required field: {field}'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    
+    # Add dependencies if not provided
+    if 'dependencies' not in task_data:
+        task_data['dependencies'] = []
+    
+    # Add to suggestion pool
+    SUGGESTION_TASKS.append(task_data)
+    
+    return Response({
+        'message': 'Task added to suggestion pool',
+        'task': task_data,
+        'total_tasks': len(SUGGESTION_TASKS)
+    })
 
 
 def _generate_explanation(task, score, strategy):

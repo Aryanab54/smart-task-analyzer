@@ -57,11 +57,11 @@ class TaskScorer:
             return 0.4
     
     def _calculate_dependency_score(self, dependencies):
-        """Calculate dependency score (fewer dependencies = higher priority)"""
+        """Calculate dependency score (tasks that block others get higher priority)"""
         if not dependencies:
-            return 1.0  # No dependencies = can start immediately
-        # More dependencies = lower priority (harder to start)
-        return max(0.3, 1.0 - (len(dependencies) * 0.15))
+            return 0.5  # No dependencies = baseline
+        # More dependencies = higher priority (blocks more tasks)
+        return min(1.0, 0.5 + (len(dependencies) * 0.1))
     
     def detect_circular_dependencies(self, tasks):
         """Detect circular dependencies in task list"""

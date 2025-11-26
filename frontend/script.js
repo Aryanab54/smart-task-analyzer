@@ -189,6 +189,10 @@ class TaskAnalyzer {
             const taskDiv = document.createElement('div');
             taskDiv.className = `task-result ${this.getPriorityClass(task.priority_score)}`;
             
+            const depCount = Array.isArray(task.dependencies) ? task.dependencies.length : 0;
+            const depList = Array.isArray(task.dependencies) && task.dependencies.length > 0 ? 
+                ` (${task.dependencies.join(', ')})` : '';
+            
             taskDiv.innerHTML = `
                 <div class="task-title">${task.title}</div>
                 <div class="task-score">${task.priority_score}</div>
@@ -196,7 +200,7 @@ class TaskAnalyzer {
                     <div class="task-detail"><strong>Due:</strong> ${task.due_date}</div>
                     <div class="task-detail"><strong>Hours:</strong> ${task.estimated_hours}</div>
                     <div class="task-detail"><strong>Importance:</strong> ${task.importance}/10</div>
-                    <div class="task-detail"><strong>Dependencies:</strong> ${task.dependencies.length}</div>
+                    <div class="task-detail"><strong>Dependencies:</strong> ${depCount}${depList}</div>
                 </div>
                 <div class="task-explanation">${task.explanation}</div>
             `;
@@ -232,7 +236,7 @@ class TaskAnalyzer {
 
     getPriorityClass(score) {
         if (score >= 0.7) return 'high-priority';
-        if (score >= 0.4) return 'medium-priority';
+        if (score >= 0.5) return 'medium-priority';
         return 'low-priority';
     }
 
